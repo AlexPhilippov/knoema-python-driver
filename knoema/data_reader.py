@@ -222,6 +222,61 @@ class PivotDataReader(SelectionDataReader):
         pandas_data_frame_with_attr = self.create_pandas_dataframe(pandas_series_with_attr, names_of_dimensions)         
         return pandas_data_frame, pandas_data_frame_with_attr
 
+class TransformationDataReader(SelectionDataReader):
+
+    def __init__(self, client, dim_values):
+        super().__init__(client, dim_values)
+
+    def get_pandasframe(self):
+        self._load_dimensions()
+        pandas_series = {}
+        names_of_dimensions = self._get_dimension_names()
+        if self.include_metadata:
+            pandas_series_with_attr = {}
+            names_of_attributes = self._get_attribute_names()
+
+        data_url = self._get_data_url()
+        pivot_resp = self.client.get_json(definition.PivotResponse, data_url)
+        # create dataframe with data
+        series = self._get_data_series(pivot_resp)
+        pandas_series = self.creates_pandas_series(series, pandas_series)
+        pandas_data_frame = self.create_pandas_dataframe(pandas_series, names_of_dimensions)
+        if not self.include_metadata:
+            return pandas_data_frame
+            
+        # create dataframe with metadata
+        series_with_attr = self._get_metadata_series(pivot_resp, names_of_attributes)
+        pandas_series_with_attr = self.creates_pandas_series(series_with_attr, pandas_series_with_attr)
+        pandas_data_frame_with_attr = self.create_pandas_dataframe(pandas_series_with_attr, names_of_dimensions)         
+        return pandas_data_frame, pandas_data_frame_with_attr
+
+    def _get_data_url(self):
+        filter_dims = {}
+
+        for name, value in self.dim_values.items():
+            if definition.is_equal_strings_ignore_case(name, 'timerange'):
+                filter_dims['timerange'] = value
+                continue
+
+            if definition.is_equal_strings_ignore_case(name, 'transform'):
+                filter_dims['transform'] = value
+                continue
+
+            splited_values = value.split(';') if isinstance(value, str) else value
+            if definition.is_equal_strings_ignore_case(name, 'frequency'):
+                filter_dims["frequency"] = ",".join(splited_values)
+                continue
+
+            dim = self._find_dimension(name)
+            if dim is None:
+                raise ValueError('Dimension with id or name {} is not found'.
+                                 format(name))
+
+            filter_dims[dim.id] =  ",".join(splited_values)
+
+        url = "/" + self.dataset.id + "?" + "&".join("=".join((str(key), str(value))) for key, value in filter_dims.items())
+        return url
+
 class StreamingDataReader(SelectionDataReader):
 
     def __init__(self, client, dim_values):
