@@ -238,7 +238,7 @@ class TestKnoemaClient(unittest.TestCase):
         """The method is testing if dataset id set up incorrectly"""
 
         with self.assertRaises(ValueError) as context:
-            knoema.get('incorrect id', somedim='val1;val2')
+            knoema.get('incorrect_id', somedim='val1;val2')
 
         self.assertTrue("Requested dataset doesn't exist or you don't have access to it." in str(context.exception))
 

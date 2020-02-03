@@ -5,6 +5,7 @@ from dateutil.relativedelta import relativedelta
 
 import pandas
 import knoema.api_definitions as definition
+from urllib.parse import quote
 
 class DataReader(object):
     """This class read data from Knoema and transform it to pandas frame"""
@@ -224,14 +225,16 @@ class PivotDataReader(SelectionDataReader):
 
 class TransformationDataReader(SelectionDataReader):
 
-    def __init__(self, client, dim_values):
+    def __init__(self, client, dim_values, transform):
+        if transform:
+            dim_values['transform'] = transform
         super().__init__(client, dim_values)
 
     def get_pandasframe(self):
-        self._load_dimensions()
         pandas_series = {}
         names_of_dimensions = self._get_dimension_names()
         if self.include_metadata:
+            self._load_dimensions()
             pandas_series_with_attr = {}
             names_of_attributes = self._get_attribute_names()
 
@@ -249,6 +252,20 @@ class TransformationDataReader(SelectionDataReader):
         pandas_series_with_attr = self.creates_pandas_series(series_with_attr, pandas_series_with_attr)
         pandas_data_frame_with_attr = self.create_pandas_dataframe(pandas_series_with_attr, names_of_dimensions)         
         return pandas_data_frame, pandas_data_frame_with_attr
+
+    def _get_dimension_names(self):
+        names = []
+        for dim in self.dataset.dimensions:
+            names.append(dim.name)
+        names.append('Frequency')             
+        return names   
+
+    def _get_series_name(self, series_point):
+        names = []
+        for dim in self.dataset.dimensions:
+            names.append(series_point[dim.id])
+        names.append(series_point['Frequency'])
+        return tuple(names) 
 
     def _get_data_url(self):
         filter_dims = {}
@@ -272,7 +289,7 @@ class TransformationDataReader(SelectionDataReader):
                 raise ValueError('Dimension with id or name {} is not found'.
                                  format(name))
 
-            filter_dims[dim.id] =  ",".join(splited_values)
+            filter_dims[dim.id] =  ",".join(quote(s) for s in splited_values)
 
         url = "/" + self.dataset.id + "?" + "&".join("=".join((str(key), str(value))) for key, value in filter_dims.items())
         return url
