@@ -398,9 +398,10 @@ class StreamingDataReader(SelectionDataReader):
 
 class MnemonicsDataReader(DataReader):
 
-    def __init__(self, client, mnemonics):
+    def __init__(self, client, mnemonics, transform):
         super().__init__(client)
         self.mnemonics = mnemonics
+        self.transform = transform
 
     def _get_metadata_series(self, resp, names_of_attributes):
         series = {}
@@ -443,7 +444,7 @@ class MnemonicsDataReader(DataReader):
 
         mnemonics = self.mnemonics
         mnemonics_string = ';'.join(mnemonics) if isinstance(mnemonics, list) else mnemonics
-        mnemonics_resp = self.client.get_mnemonics(mnemonics_string)
+        mnemonics_resp = self.client.get_mnemonics(mnemonics_string, self.transform)
             
         for item in mnemonics_resp.items:
             pivot_resp = item.pivot

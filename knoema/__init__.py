@@ -13,17 +13,13 @@ def get(dataset = None, include_metadata = False, mnemonics = None, transform = 
     if mnemonics and dim_values:
         raise ValueError('The function does not support specifying mnemonics and selection in a single call')
 
-    if mnemonics and transform:
-        raise ValueError('The function does not support transformations when specifying mnemonics')
-
-
     config = ApiConfig()
     client = ApiClient(config.host, config.app_id, config.app_secret)
     client.check_correct_host()
 
     ds = client.get_dataset(dataset) if dataset else None
 
-    reader =  MnemonicsDataReader(client, mnemonics) if mnemonics \
+    reader =  MnemonicsDataReader(client, mnemonics, transform) if mnemonics \
         else TransformationDataReader(client, dim_values, transform) if ds.type != 'Regular' or 'frequency' in dim_values or transform\
         else StreamingDataReader(client, dim_values)
 
