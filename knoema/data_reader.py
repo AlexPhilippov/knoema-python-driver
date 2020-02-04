@@ -88,11 +88,14 @@ class DataReader(object):
             if series_name not in series:
                 series[series_name] = KnoemaSeries(series_name,[],[])
 
-            curr_date_val = series_point['Time']
-            try:
-                curr_date_val = datetime.strptime(series_point['Time'], '%Y-%m-%dT%H:%M:%SZ')
-            except ValueError:
-                pass
+            if 'Time' in series_point:
+                curr_date_val = series_point['Time']
+                try:
+                    curr_date_val = datetime.strptime(series_point['Time'], '%Y-%m-%dT%H:%M:%SZ')
+                except ValueError:
+                    pass
+            else:
+                curr_date_val = 'All time'
 
             if (series_point['Frequency'] == "W"):
                 curr_date_val = curr_date_val - timedelta(days = curr_date_val.weekday())
@@ -263,20 +266,18 @@ class TransformationDataReader(SelectionDataReader):
     def _get_series_name(self, series_point):
         names = []
         for dim in self.dataset.dimensions:
-            names.append(series_point[dim.id])
+            if dim.id in series_point:
+                names.append(series_point[dim.id])
         names.append(series_point['Frequency'])
         return tuple(names) 
 
     def _get_data_url(self):
         filter_dims = {}
+        passed_params = ['timerange', 'transform', 'datecolumn']
 
         for name, value in self.dim_values.items():
-            if definition.is_equal_strings_ignore_case(name, 'timerange'):
-                filter_dims['timerange'] = value
-                continue
-
-            if definition.is_equal_strings_ignore_case(name, 'transform'):
-                filter_dims['transform'] = value
+            if name.lower() in passed_params:
+                filter_dims[name] = value
                 continue
 
             splited_values = value.split(';') if isinstance(value, str) else value

@@ -23,13 +23,9 @@ def get(dataset = None, include_metadata = False, mnemonics = None, transform = 
 
     ds = client.get_dataset(dataset) if dataset else None
 
-    if ds and ds.type != 'Regular' and transform:
-        raise ValueError('The function does not support transformations for Flat datasets')
-
     reader =  MnemonicsDataReader(client, mnemonics) if mnemonics \
-        else PivotDataReader(client, dim_values) if ds.type != 'Regular' \
-        else StreamingDataReader(client, dim_values) if 'frequency' not in dim_values and transform == None \
-        else TransformationDataReader(client, dim_values, transform)
+        else TransformationDataReader(client, dim_values, transform) if ds.type != 'Regular' or 'frequency' in dim_values or transform\
+        else StreamingDataReader(client, dim_values)
 
     reader.include_metadata = include_metadata
     reader.dataset = ds
